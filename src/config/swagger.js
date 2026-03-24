@@ -13,12 +13,12 @@ const swaggerOptions = {
             },
             servers: [
                 {
-                    url: `http://localhost:${config.port}`,
-                    description: 'Local server'
+                    url: '/',
+                    description: 'Current Environment'
                 },
                 {
-                    url: `http://127.0.0.1:${config.port}`,
-                    description: 'Local server (IP)'
+                    url: `http://localhost:${config.port}`,
+                    description: 'Local server'
                 }
             ]
         },
