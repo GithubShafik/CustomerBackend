@@ -1,23 +1,26 @@
-                                                                                                                                                                                                                                            const express = require('express');
+const express = require('express');
 const cors = require('cors');
 const router = require('./routes/index');
 const errorMiddleware = require('./middlewares/errorMiddleware');
 const swaggerUi = require('swagger-ui-express');
-const path = require('path');
 const swaggerDocs = require('./config/swagger');
+const { connectDB } = require('./config/db');
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
-// Swagger Documentation
+// ✅ Connect DB (important)
+connectDB();
+
+// Swagger
 app.use('/swagger', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
-// Main Routes
+// Routes
 app.use('/api', router);
 
-// Error Handler
+// Error handler
 app.use(errorMiddleware);
 
 module.exports = app;
