@@ -15,7 +15,7 @@ app.use(express.json());
 connectDB();
 
 // Swagger JSON endpoint
-app.get('/swagger', (req, res) => {
+app.get('/api-docs', (req, res) => {
     res.json(swaggerDocs);
 });
 
