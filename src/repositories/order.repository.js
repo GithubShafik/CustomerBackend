@@ -27,6 +27,7 @@ const getOrdersByCustomerId = async (customerId) => {
             ORDD AS deliveryDate,
             ORCD AS orderCode,
             OOID AS outletId
+            CID AS customerID
         FROM Orders
         WHERE ORCD = ?
         ORDER BY ORDT DESC
@@ -47,7 +48,8 @@ const getOrdersByStatus = async (customerId, status) => {
             ORST AS orderStatus,
             ORDD AS deliveryDate,
             ORCD AS orderCode,
-            OOID AS outletId
+            OOID AS outletId,
+             CID AS customerID
         FROM Orders
         WHERE ORCD = ? AND ORST = ?
         ORDER BY ORDT DESC
@@ -74,7 +76,7 @@ const getAllOrderTypes = async () => {
 /**
  * Create a new order and trip (GUID from MySQL)
  */
-const createOrder = async (orderData, tripData) => {
+const createOrder = async (orderData, tripData,customerId) => {
     const connection = await pool.getConnection();
 
     try {
@@ -88,8 +90,8 @@ const createOrder = async (orderData, tripData) => {
 
         // 1. Insert Order
         const orderQuery = `
-            INSERT INTO Orders (ORID, ORDT, ORVL, ORST, ORDD, ORCD, OOID)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO Orders (ORID, ORDT, ORVL, ORST, ORDD, ORCD, OOID, CID)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `;
         await connection.execute(orderQuery, [
             orderId,
@@ -98,7 +100,8 @@ const createOrder = async (orderData, tripData) => {
             orderData.ORST,
             orderData.ORDD,
             orderData.ORCD,
-            orderData.OOID
+            orderData.OOID,
+            customerId
         ]);
 
         // 2. Insert OrderTrip

@@ -88,9 +88,13 @@ exports.bookOrder = async (req, res) => {
             return res.status(400).json({ success: false, message: "Missing orderData or tripData" });
         }
 
+        console.log("customer",req.customer.customerId)
+        const customerId = req.customer.customerId;
+
+
         // 1. Create order in DB
         console.log("💾 Creating order in DB...");
-        const orderId = await OrderRepository.createOrder(orderData, tripData);
+        const orderId = await OrderRepository.createOrder(orderData, tripData,customerId);
         console.log("✅ Order created in DB with ID:", orderId);
 
         // 2. Extract lat/lng from pickup location (OTSLL: "lat,lng")
@@ -116,8 +120,8 @@ exports.bookOrder = async (req, res) => {
             };
             
             try {
-                // Determine Partner Backend URL (Defaults to localhost:8001)
-                const partnerBackendUrl = process.env.PARTNER_BACKEND_URL || 'http://localhost:8001';
+                // Determine Partner Backend URL (Defaults to localhost:8002)
+                const partnerBackendUrl = process.env.PARTNER_BACKEND_URL || 'http://localhost:8002';
                 
                 console.log(`🌉 [Cross-Backend Bridge] Sending notification request to ${partnerBackendUrl}...`);
                 
@@ -152,7 +156,7 @@ exports.bookOrder = async (req, res) => {
             success: false,
             message: "Internal Server Error during booking",
             error: error.message,
-            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+            stack: process.env.NODE_ENV === 'development' ? error.stack : null
         });
     }
 };
