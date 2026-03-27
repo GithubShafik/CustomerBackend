@@ -165,7 +165,8 @@ exports.bookOrder = async (req, res) => {
             
             try {
                 // Determine Partner Backend URL (Defaults to localhost:8002)
-                const partnerBackendUrl = process.env.PARTNER_BACKEND_URL || 'http://localhost:8002';
+                // const partnerBackendUrl = process.env.PARTNER_BACKEND_URL || 'http://localhost:8002';
+                const partnerBackendUrl = 'https://dpbackend-tjvf.onrender.com';
                 
                 console.log(`🌉 [Cross-Backend Bridge] Sending notification to ${uniquePartnerIds.length} unique partners at ${partnerBackendUrl}...`);
                 
