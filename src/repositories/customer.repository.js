@@ -14,70 +14,62 @@ const pool = mysql.createPool({
 });
 
 /**
- * Find a customer by phone number (with fallback for country code variations)
+ * Find customer by phone with +91 fallback
  */
 const findCustomerByPhone = async (phone) => {
     try {
         let query = "SELECT * FROM Customers WHERE CDN = ?";
         let [results] = await pool.execute(query, [phone]);
 
-        if (results[0]) {
-            console.log(`✅ Found customer with exact match: ${phone}`);
-            return results[0];
+        if (results[0]) return results[0];
+
+        if (phone.startsWith("+91")) {
+            const withoutCode = phone.substring(3);
+            [results] = await pool.execute(query, [withoutCode]);
+            if (results[0]) return results[0];
+        } else {
+            const withCode = `+91${phone}`;
+            [results] = await pool.execute(query, [withCode]);
+            if (results[0]) return results[0];
         }
 
-        console.log(`❌ No exact match for: ${phone}, trying variations...`);
-
-        if (phone.startsWith('+91') && phone.length > 3) {
-            const phoneWithoutCode = phone.substring(3);
-            console.log(`🔍 Trying without +91: ${phoneWithoutCode}`);
-            [results] = await pool.execute(query, [phoneWithoutCode]);
-
-            if (results[0]) {
-                console.log(`✅ Found customer without +91: ${phoneWithoutCode}`);
-                return results[0];
-            }
-        }
-
-        if (!phone.startsWith('+91')) {
-            const phoneWithCode = `+91${phone}`;
-            console.log(`🔍 Trying with +91: ${phoneWithCode}`);
-            [results] = await pool.execute(query, [phoneWithCode]);
-
-            if (results[0]) {
-                console.log(`✅ Found customer with +91: ${phoneWithCode}`);
-                return results[0];
-            }
-        }
-
-        console.log(`❌ Customer not found with any variation of: ${phone}`);
         return null;
     } catch (error) {
-        console.error("Error finding customer by phone:", error);
-        throw error;
+        console.error("findCustomerByPhone error:", error);
+        return null;
     }
 };
 
 /**
- * Create a new customer
+ * Generate unique customer ID
+ */
+const generateCustomerId = () => {
+    const timestamp = Date.now().toString().slice(-5);
+    const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+    return `C${timestamp}${random}`;
+};
+
+/**
+ * Create customer
  */
 const createCustomer = async (customerData) => {
     try {
-        const {
-            CID,
-            CFN,
-            CMN,
-            CLN,
-            CDN,
-            CTL,
-            email,
-            dob,
-            addressLine1,
-            addressLine2,
-            city,
-            state,
-            postalCode
-        } = customerData;
+        const customer = {
+            CID: customerData.CID || generateCustomerId(),
+            CFN: customerData.CFN || "New",
+            CMN: customerData.CMN || "",
+            CLN: customerData.CLN || "Customer",
+            CDN: customerData.CDN,
+            CANN: customerData.CANN || "",
+            CTL: 1,
+            email: customerData.email || "",
+            dob: customerData.dob || "",
+            addressLine1: customerData.addressLine1 || "",
+            addressLine2: customerData.addressLine2 || "",
+            city: customerData.city || "",
+            state: customerData.state || "",
+            postalCode: customerData.postalCode || ""
+        };
 
         const query = `
             INSERT INTO Customers (
@@ -86,106 +78,60 @@ const createCustomer = async (customerData) => {
                 CADCT, CADST, CADC, CADZ,
                 CDOB, CANN, CSPOU, CCHIL1, CCHIL2, CSPIN
             )
-            VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, '', ?, ?, '', ?, ?, '', '', '', '', ?)
+            VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, '', ?, ?, '', ?, ?, ?, '', '', '', ?)
         `;
 
         const params = [
-            CID,
-            CFN        || '',
-            CMN        || '',
-            CLN        || '',
-            CDN,
-            CTL        ?? 0,
-            addressLine1 || '',
-            addressLine2 || '',
-            city         || '',
-            state        || '',
-            postalCode   || '',
-            dob          || '',
-            email        || ''
+            customer.CID,
+            customer.CFN,
+            customer.CMN,
+            customer.CLN,
+            customer.CDN,
+            customer.CTL,
+            customer.addressLine1,
+            customer.addressLine2,
+            customer.city,
+            customer.state,
+            customer.postalCode,
+            customer.dob,
+            customer.CANN,
+            customer.email
         ];
 
-        console.log(`💾 Attempting to create customer: ${CID}, Phone: ${CDN}`);
         await pool.execute(query, params);
-        console.log(`✅ Customer created successfully: ${CID}`);
 
-        return { CID, CFN, CMN, CLN, CDN, CTL };
+        return customer;
     } catch (error) {
-        if (error.code === 'ER_DUP_ENTRY') {
-            console.log(`⚠️ Duplicate CID ${customerData.CID}, generating new one...`);
-            const newCID = generateCustomerId();
-            console.log(`🆕 New CID: ${newCID}`);
-
-            const {
-                CFN, CMN, CLN, CDN, CTL,
-                email, dob,
-                addressLine1, addressLine2,
-                city, state, postalCode
-            } = customerData;
-
-            const query = `
-                INSERT INTO Customers (
-                    CID, CFN, CMN, CLN, CDN, CTL,
-                    CSTAT, CADL1, CADL2, CADLM,
-                    CADCT, CADST, CADC, CADZ,
-                    CDOB, CANN, CSPOU, CCHIL1, CCHIL2, CSPIN
-                )
-                VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, '', ?, ?, '', ?, ?, '', '', '', '', ?)
-            `;
-
-            const params = [
-                newCID,
-                CFN          || '',
-                CMN          || '',
-                CLN          || '',
-                CDN,
-                CTL          ?? 0,
-                addressLine1 || '',
-                addressLine2 || '',
-                city         || '',
-                state        || '',
-                postalCode   || '',
-                dob          || '',
-                email        || ''
-            ];
-
-            console.log(`💾 Retrying with new CID: ${newCID}, Phone: ${CDN}`);
-            await pool.execute(query, params);
-            console.log(`✅ Customer created successfully with new CID: ${newCID}`);
-
-            return { CID: newCID, CFN, CMN, CLN, CDN, CTL };
-        }
-
-        console.error("❌ Error creating customer:", error.message);
+        console.error("createCustomer error:", error);
         throw error;
     }
 };
 
 /**
- * Update customer phone verification status
+ * Update verification
  */
 const updateCustomerVerification = async (phone) => {
     try {
+        const phones = [phone];
+
+        if (phone.startsWith("+91")) {
+            phones.push(phone.substring(3));
+        } else {
+            phones.push(`+91${phone}`);
+        }
+
         const query = `
-            UPDATE Customers 
-            SET CTL = 1 
-            WHERE CDN = ?
+            UPDATE Customers
+            SET CTL = 1
+            WHERE CDN IN (?, ?)
         `;
-        await pool.execute(query, [phone]);
+
+        await pool.execute(query, phones);
         return true;
     } catch (error) {
-        console.error("Error updating customer verification:", error);
-        throw error;
+        console.error("updateCustomerVerification error:", error);
+        return false;
     }
-};
-
-/**
- * Generate a unique customer ID (max 10 chars to fit char(10) column)
- */
-const generateCustomerId = () => {
-    const timestamp = Date.now().toString().slice(-5);
-    const random = Math.random().toString(36).substring(2, 6).toUpperCase();
-    return `C${timestamp}${random}`;
 };
 
 module.exports = {

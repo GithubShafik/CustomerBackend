@@ -1,7 +1,7 @@
 {
   "name": "navigation-backend",
   "version": "1.0.0",
-  "description": "",
+  "description": "```\r PADDLE_DROP_Backend/\r ├── src/\r │   ├── config/              # Configuration files\r │   │   ├── db.js           # Database connection\r │   │   └── env.js          # Environment variables\r │   │\r │   ├── modules/            # Feature modules\r │   │   ├── auth/          # Authentication module\r │   │   │   ├── auth.controller.js\r │   │   │   ├── auth.routes.js\r │   │   │   └── auth.service.js\r │   │   │\r │   │   └── location/      # Location module\r │   │       ├── location.controller.js\r │   │       ├── location.routes.js\r │   │       └── location.service.js\r │   │\r │   ├── repositories/       # Data access layer\r │   │   ├── customer.repository.js\r │   │   └── otp.repository.js\r │   │\r │   ├── middlewares/        # Express middlewares\r │   │   └── errorMiddleware.js\r │   │\r │   ├── routes/            # Main routes aggregator\r │   │   └── index.js\r │   │\r │   ├── utils/             # Utility functions\r │   │   └── GenerateOTP.js\r │   │\r │   └── app.js            # Express app setup\r │\r ├── .env                  # Environment variables\r ├── .env.example          # Environment template\r ├── server.js            # Entry point\r ├── package.json\r └── README.md\r ```",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
