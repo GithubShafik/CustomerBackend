@@ -15,11 +15,21 @@ const initSocket = (server) => {
         console.log("A user connected:", socket.id);
 
         socket.on("join", (data) => {
-            // Data should contain partnerId and role
-            if (data.role === 'partner' && data.partnerId) {
-                const roomName = `partner_${data.partnerId}`;
+            // Data should contain role and id
+            const { role, partnerId, customerId } = data;
+            
+            if (role === 'partner' || partnerId) {
+                const id = partnerId || customerId; // some devices might mix up ID keys
+                const roomName = `partner_${id}`;
                 socket.join(roomName);
-                console.log(`Partner ${data.partnerId} joined room ${roomName} with socket ${socket.id}`);
+                console.log(`✅ Partner ${id} joined room ${roomName}`);
+            } else if (role === 'customer' || customerId) {
+                const id = customerId || data.id;
+                const roomName = `customer_${id}`;
+                socket.join(roomName);
+                console.log(`✅ Customer ${id} joined room ${roomName}`);
+            } else {
+                console.warn("⚠️ Unknown join attempt:", data);
             }
         });
 

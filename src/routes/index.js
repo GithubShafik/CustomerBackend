@@ -7,6 +7,9 @@ const locationRoutes = require("../modules/location/location.routes");
 router.use("/auth", authRoutes);
 router.use("/location", locationRoutes);
 router.use("/orders", require("../modules/order/order.routes"));
+router.use("/customer", require("../modules/customer/customer.routes"));
+router.use("/attachment", require("../modules/attachment/attachment.routes"));
+router.use("/payment", require("../modules/payment/payment.routes"));
 
 router.get("/ping", async (req, res) => {
     try {

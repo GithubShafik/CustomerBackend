@@ -134,9 +134,58 @@ const updateCustomerVerification = async (phone) => {
     }
 };
 
+/**
+ * Find customer by CID (Customer ID)
+ */
+const findCustomerById = async (customerId) => {
+    try {
+        const query = "SELECT * FROM Customers WHERE CID = ?";
+        const [results] = await pool.execute(query, [customerId]);
+        return results[0] || null;
+    } catch (error) {
+        console.error("findCustomerById error:", error);
+        return null;
+    }
+};
+
+const updateCustomerById = async (customerId, updateData) => {
+    try {
+        const fields = [];
+        const values = [];
+
+        Object.keys(updateData).forEach((key) => {
+            if (updateData[key] !== undefined) {
+                fields.push(`${key} = ?`);
+                values.push(updateData[key]);
+            }
+        });
+
+        if (fields.length === 0) {
+            return await findCustomerById(customerId);
+        }
+
+        const query = `
+            UPDATE Customers
+            SET ${fields.join(", ")}
+            WHERE CID = ?
+        `;
+
+        values.push(customerId);
+
+        await pool.execute(query, values);
+
+        return await findCustomerById(customerId);
+    } catch (error) {
+        console.error("updateCustomerById error:", error);
+        throw error;
+    }
+};
+
 module.exports = {
     findCustomerByPhone,
+    findCustomerById,
     createCustomer,
     updateCustomerVerification,
-    generateCustomerId
+    generateCustomerId,
+    updateCustomerById
 };

@@ -3,70 +3,54 @@ const cors = require('cors');
 const router = require('./routes/index');
 const errorMiddleware = require('./middlewares/errorMiddleware');
 const swaggerUi = require('swagger-ui-express');
+const path = require('path');
 const swaggerDocs = require('./config/swagger');
-const { connectDB } = require('./config/db');
-
 
 const app = express();
 
-app.use(cors({
-  origin: "*",
-  methods: ["GET","POST","PUT","DELETE","PATCH"],
-  allowedHeaders: ["Content-Type","Authorization"]
-}));
+app.use(cors());
 app.use(express.json());
 
-// ✅ Connect DB (important)
-connectDB();
+// Swagger Documentation
+app.use('/swagger', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
-// Swagger JSON endpoint
-app.get('/api-docs', (req, res) => {
-    res.json(swaggerDocs);
+// Serve local fallback uploads
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Internal Bridge for Cross-Backend Communication
+const { getIO } = require('./utils/socket');
+app.post('/api/internal/customer/notify-accepted', (req, res) => {
+    const { customerId, orderId, dp, dpLocation, estimatedTime } = req.body;
+    console.log(`[Internal Bridge] 📥 RECEIVED acceptance for order ${orderId}, customer ${customerId}`);
+    
+    if (!customerId || !orderId) {
+        console.warn("[Internal Bridge] ⚠️ Missing customerId or orderId in payload:", req.body);
+        return res.status(400).json({ success: false, error: "Missing customerId or orderId" });
+    }
+
+    try {
+        const io = getIO();
+        const roomName = `customer_${customerId}`;
+        
+        io.to(roomName).emit("order_accepted", {
+            orderId,
+            dp,
+            dpLocation,
+            estimatedTime
+        });
+        
+        console.log(`[Internal Bridge] 🔔 EMITTED 'order_accepted' to room ${roomName}`);
+        res.status(200).json({ success: true, message: "Customer notified successfully" });
+    } catch (error) {
+        console.error("[Internal Bridge] ❌ SOCKET ERROR:", error.message);
+        res.status(500).json({ success: false, error: "Internal socket error" });
+    }
 });
 
-// Swagger UI Manual Setup (Robust for Vercel)
-app.get('/swagger', (req, res) => {
-    res.send(`
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Paddel Drop API Documentation</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.11.0/swagger-ui.min.css">
-    <link rel="icon" type="image/png" href="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.11.0/favicon-32x32.png" sizes="32x32" />
-    <style>
-        html { box-sizing: border-box; overflow-y: scroll; }
-        *, *:before, *:after { box-sizing: inherit; }
-        body { margin: 0; background: #fafafa; }
-        .swagger-ui .topbar { display: none }
-    </style>
-</head>
-<body>
-    <div id="swagger-ui"></div>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.11.0/swagger-ui-bundle.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.11.0/swagger-ui-standalone-preset.js"></script>
-    <script>
-        window.onload = () => {
-            window.ui = SwaggerUIBundle({
-                url: '/api-docs',
-                dom_id: '#swagger-ui',
-                presets: [
-                    SwaggerUIBundle.presets.apis,
-                    SwaggerUIStandalonePreset
-                ],
-                layout: "StandaloneLayout",
-            });
-        };
-    </script>
-</body>
-</html>
-    `);
-});
-
-// Routes
+// Main Routes
 app.use('/api', router);
 
-// Error handler
+// Error Handler
 app.use(errorMiddleware);
 
 module.exports = app;

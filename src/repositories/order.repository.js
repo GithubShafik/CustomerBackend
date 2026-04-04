@@ -79,7 +79,7 @@ const createOrder = async (orderData, tripData) => {
 
     try {
         await connection.beginTransaction();
-        
+
         // Use Node.js crypto for GUIDs (more reliable than extra DB calls)
         const orderId = crypto.randomUUID();
         const tripId = crypto.randomUUID();
@@ -88,18 +88,29 @@ const createOrder = async (orderData, tripData) => {
 
         // 1. Insert Order
         const orderQuery = `
-            INSERT INTO Orders (ORID, ORDT, ORVL, ORST, ORDD, ORCD, OOID)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        `;
-        await connection.execute(orderQuery, [
-            orderId,
-            orderData.ORDT,
-            orderData.ORVL,
-            orderData.ORST,
-            orderData.ORDD,
-            orderData.ORCD,
-            orderData.OOID
-        ]);
+    INSERT INTO Orders (
+        ORID, ORDT, ORVL, ORST, ORDD, ORCD, OOID, DPID, CID, AttID, OWt, PayStatus, RzpOrderID, RzpPaymentID, RzpSignature
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+`;
+
+       await connection.execute(orderQuery, [
+    orderId,
+    orderData.ORDT || null,
+    orderData.ORVL || 0,
+    orderData.ORST || "Pending",
+    orderData.ORDD || "",
+    orderData.ORCD || null,
+    orderData.OOID || "",  // Empty string instead of null
+    orderData.DPID || null,
+    orderData.CID || null,
+    orderData.AttID || null,
+    orderData.OWt || null,
+    orderData.PayStatus || "PENDING",
+    orderData.RzpOrderID || null,
+    orderData.RzpPaymentID || null,
+    orderData.RzpSignature || null
+]);
 
         // 2. Insert OrderTrip
         const tripQuery = `
@@ -149,10 +160,57 @@ const findNearbyPartners = async (lat, lng) => {
     return results;
 };
 
+const getOrderRate = async () => {
+    const connection = await pool.getConnection();
+    try {
+        const query = `
+            SELECT 
+                OTID  AS orderTimeId,
+                OTWS  AS startTime,
+                OTWE  AS endTime,
+                OTWN  AS windowName,
+                OWWF  AS weatherFactor,
+                OWWD  AS weatherDescription,
+                OTRA  AS rate,
+                ORDU  AS distanceUomId
+            FROM OrderRateMaster
+            WHERE ORDU IS NOT NULL
+            ORDER BY OTWS
+        `;
+
+        const [rows] = await connection.execute(query);
+        return rows;
+
+    } finally {
+        connection.release();
+    }
+};
+
+const getTermsAndConditions = async () => {
+    const connection = await pool.getConnection();
+    try {
+        const query = `
+            SELECT 
+                TCCU AS customerTnC,
+                TCDP AS deliveryPartnerTnC,
+                TCPG AS paymentGatewayTnC
+            FROM PDTnC
+            LIMIT 1
+        `;
+
+        const [rows] = await connection.execute(query);
+        return rows[0];
+
+    } finally {
+        connection.release();
+    }
+};
 module.exports = {
     getOrdersByCustomerId,
     getOrdersByStatus,
     getAllOrderTypes,
     createOrder,
-    findNearbyPartners
+    findNearbyPartners,
+    getOrderRate,
+    getTermsAndConditions
 };

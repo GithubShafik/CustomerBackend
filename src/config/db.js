@@ -13,12 +13,12 @@ const dbConfig = {
     connectTimeout: 10000 // 10 seconds
 };
 
-let connection;
+const connection = mysql.createPool(dbConfig);
 
 const connectDB = async () => {
     try {
         console.log("Connecting to Paddel Drop DB...");
-        connection = await mysql.createConnection(dbConfig);
+        await connection.query("SELECT 1");
         console.log("Paddel Drop DB Connected");
     } catch (err) {
         console.error("Paddel Drop DB Connection Failed");

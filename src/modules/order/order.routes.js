@@ -101,4 +101,33 @@ router.get("/types", orderController.getOrderTypes);
  */
 router.post("/book", protect, orderController.bookOrder);
 
+/**
+ * GET /api/orders/:orderId/status — Poll order acceptance status
+ */
+router.get("/:orderId/status", protect, orderController.getOrderStatus);
+
+/**
+ * @swagger
+ * /api/orders/order-rate:
+ *   get:
+ *     summary: Get current order rate based on time window
+ *     tags: [Orders]
+ *     responses:
+ *       200:
+ *         description: Current order rate fetched successfully
+ */
+router.get("/order-rate", orderController.getOrderRateController);
+
+/**
+ * @swagger
+ * /api/orders/terms-and-conditions:
+ *   get:
+ *     summary: Get Terms and Conditions
+ *     tags: [Orders]
+ *     responses:
+ *       200:
+ *         description: Terms and Conditions fetched successfully
+ */
+router.get("/terms-and-conditions", orderController.getTermsAndConditionsController);
+
 module.exports = router;
