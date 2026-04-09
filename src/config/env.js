@@ -13,6 +13,10 @@ module.exports = {
     port: process.env.DB_PORT || 3306,
   },
   jwtSecret: process.env.JWT_SECRET || "paddel-drop-secret-key-change-in-production",
+
+  // ✅ ADD THIS
+  twoFactorApiKey: process.env.TWO_FACTOR_API_KEY,
+
   razorpay: {
     key_id: process.env.RAZORPAY_KEY_ID,
     key_secret: process.env.RAZORPAY_KEY_SECRET

@@ -1,5 +1,6 @@
 const CustomerRepository = require("../../repositories/customer.repository");
 const { generateOTP } = require("../../utils/GenerateOTP");
+const axios = require("axios");
 const { normalizePhone } = require("../../utils/phone");
 const jwt = require("jsonwebtoken");
 
@@ -99,47 +100,42 @@ exports.registerCustomer = async (req, res) => {
 };
 /* ---------------- SEND OTP ---------------- */
 
-exports.registerAndSendOtp = async (req,res)=>{
 
-    try{
-
+exports.registerAndSendOtp = async (req, res) => {
+    try {
         const { phone } = req.body;
 
-        if(!phone){
+        const normalizedPhone = normalizePhone(phone);
+        const otp = Math.floor(1000 + Math.random() * 9000).toString();
 
-            return res.status(400).json({
-                success:false,
-                error:"Phone required"
+        console.log("SEND OTP:", normalizedPhone, otp); // debug
+
+        const response = await axios.get(
+            `https://2factor.in/API/V1/${process.env.TWO_FACTOR_API_KEY}/SMS/${normalizedPhone}/${otp}`
+        );
+
+        if (response.data.Status !== "Success") {
+            return res.status(500).json({
+                success: false,
+                error: "Failed to send OTP"
             });
         }
 
-        const normalizedPhone = normalizePhone(phone);
-
-        const otp = generateOTP();
-
-        otpStorage.set(normalizedPhone,{
-            otp,
-            timestamp:Date.now()
+        otpStorage.set(normalizedPhone, {
+            code: otp,
+            createdAt: new Date()
         });
-
-        console.log(`OTP for ${normalizedPhone}: ${otp}`);
 
         res.json({
-            success:true,
-            message:"OTP sent",
-            dev_otp:otp
+            success: true,
+            message: "OTP sent successfully"
         });
 
-    }catch(error){
-
-        res.status(500).json({
-            success:false,
-            error:error.message
-        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, error: error.message });
     }
 };
-
-
 /* ---------------- VERIFY OTP ---------------- */
 
 exports.verifyOtpAndLogin = async (req, res) => {
@@ -147,78 +143,63 @@ exports.verifyOtpAndLogin = async (req, res) => {
         const { phone, otp } = req.body;
 
         const normalizedPhone = normalizePhone(phone);
-        const record = otpStorage.get(normalizedPhone);
+        const storedOtp = otpStorage.get(normalizedPhone);
 
-        if (!record) {
+        if (!storedOtp) {
             return res.status(400).json({
                 success: false,
                 error: "OTP not found"
             });
         }
 
-        if (Date.now() - record.timestamp > 600000) {
-            otpStorage.delete(normalizedPhone);
+        const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
 
+        if (storedOtp.createdAt < tenMinutesAgo) {
+            otpStorage.delete(normalizedPhone);
             return res.status(400).json({
                 success: false,
                 error: "OTP expired"
             });
         }
 
-        if (record.otp !== otp) {
+        if (storedOtp.code !== String(otp).trim()) {
             return res.status(400).json({
                 success: false,
                 error: "Invalid OTP"
             });
         }
 
-        // ✅ Find existing customer
-        let customer = await CustomerRepository.findCustomerByPhone(normalizedPhone);
+        otpStorage.delete(normalizedPhone);
 
-        // ✅ AUTO CREATE IF NOT FOUND
+        let customer =
+            await CustomerRepository.findCustomerByPhone(normalizedPhone);
+
         if (!customer) {
+            const customerId = CustomerRepository.generateCustomerId();
+
             customer = await CustomerRepository.createCustomer({
-                CID: CustomerRepository.generateCustomerId(),
-                CFN: "New",
-                CMN: "",
-                CLN: "Customer",
+                CID: customerId,
                 CDN: normalizedPhone,
-                CTL: 1,
-                email: "",
-                dob: "",
-                addressLine1: "",
-                addressLine2: "",
-                city: "",
-                state: "",
-                postalCode: ""
+                CTL: 0
             });
         }
 
-        await CustomerRepository.updateCustomerVerification(normalizedPhone);
-
-        otpStorage.delete(normalizedPhone);
-
+        // generate token
         const token = jwt.sign(
-            {
-                customerId: customer.CID
-            },
-            process.env.JWT_SECRET || "dev_secret",
+            { id: customer.CID, phone: normalizedPhone },
+            process.env.JWT_SECRET,
             { expiresIn: "7d" }
         );
 
         res.json({
             success: true,
-            token,
-            customer: {
-                id: customer.CID,
-                firstName: customer.CFN,
-                lastName: customer.CLN
-            }
+            message: "OTP verified",
+            customer,
+            token
         });
 
     } catch (error) {
-        console.error("❌ OTP Verify Error:", error);
-
+        console.error(error);
         res.status(500).json({
             success: false,
             error: error.message

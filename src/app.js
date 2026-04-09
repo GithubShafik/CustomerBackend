@@ -5,6 +5,7 @@ const errorMiddleware = require('./middlewares/errorMiddleware');
 const swaggerUi = require('swagger-ui-express');
 const path = require('path');
 const swaggerDocs = require('./config/swagger');
+require("dotenv").config();
 
 const app = express();
 

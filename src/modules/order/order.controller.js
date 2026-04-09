@@ -253,7 +253,15 @@ exports.bookOrder = async (req, res) => {
           console.log("💾 Creating order in DB for customer:", customerId);
         const orderId = await OrderRepository.createOrder(orderData, tripData);
         console.log("✅ Order created in DB with ID:", orderId);
-
+        // Create entry in OrderPayments
+        // if (paymentData) {
+        //     await OrderRepository.createOrderPayment({
+        //         OID: orderId,
+        //         PID: paymentData.rzp_payment_id,
+        //         Amount: orderData.ORVL,
+        //         Status: "PAID"
+        //     });
+        // }
         // Get pickup coordinates for nearby riders
         const [lat, lng] = tripData.OTSLL.split(",").map(Number);
 
@@ -272,7 +280,7 @@ exports.bookOrder = async (req, res) => {
 
             try {
                  // Determine Partner Backend URL (Defaults to localhost:8001)
-                const partnerBackendUrl = process.env.PARTNER_BACKEND_URL || 'http://localhost:8001';
+                const partnerBackendUrl = process.env.PARTNER_BACKEND_URL || 'http://localhost:8002';
 
                 console.log(`🌉 [Cross-Backend Bridge] Sending notification request to ${partnerBackendUrl}...`);
                 

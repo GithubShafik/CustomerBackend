@@ -114,14 +114,33 @@ const createOrder = async (orderData, tripData) => {
 
         // 2. Insert OrderTrip
         const tripQuery = `
-            INSERT INTO OrderTrips (OTID, ORID, OTSLL, OTDLL, OTSD, OTDD)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO OrderTrips (
+                OTID, ORID, OTSLL, OTDLL, 
+                OTSA1, OTSA2, OTSA3, OTSC, OTSZ, OTSS, OTSCO,
+                OTDA1, OTDA2, OTDA3, OTDC, OTDZ, OTDS, OTDCO,
+                OTSD, OTDD
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
         await connection.execute(tripQuery, [
             tripId,
             orderId,
             tripData.OTSLL,
             tripData.OTDLL,
+            tripData.OTSA1 || "",
+            tripData.OTSA2 || "",
+            tripData.OTSA3 || "",
+            tripData.OTSC || "",
+            tripData.OTSZ || "",
+            tripData.OTSS || "",
+            tripData.OTSCO || "",
+            tripData.OTDA1 || "",
+            tripData.OTDA2 || "",
+            tripData.OTDA3 || "",
+            tripData.OTDC || "",
+            tripData.OTDZ || "",
+            tripData.OTDS || "",
+            tripData.OTDCO || "",
             tripData.OTSD,
             tripData.OTDD
         ]);

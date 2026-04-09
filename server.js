@@ -2,6 +2,7 @@ const http = require('http');
 const app = require('./src/app');
 const { connectDB } = require('./src/config/db');
 const config = require('./src/config/env');
+require("dotenv").config();  
 const { initSocket } = require('./src/utils/socket');
 
 const PORT = config.port;
