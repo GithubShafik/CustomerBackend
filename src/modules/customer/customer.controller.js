@@ -6,7 +6,7 @@ const CustomerRepository = require("../../repositories/customer.repository");
  */
 exports.getCustomerById = async (req, res) => {
     try {
-        const { customerId } = req.customer; // From JWT via protect middleware
+        const customerId = req.customer?.id || req.customer?.customerId; // From JWT via protect middleware
 
         if (!customerId) {
             return res.status(400).json({
@@ -55,7 +55,7 @@ exports.getCustomerById = async (req, res) => {
 
 exports.updateCustomerById = async (req, res) => {
     try {
-        const { customerId } = req.customer;
+        const customerId = req.customer?.id || req.customer?.customerId;
 
         if (!customerId) {
             return res.status(400).json({

@@ -216,6 +216,12 @@ exports.bookOrder = async (req, res) => {
             return res.status(400).json({ success: false, message: "Missing orderData or tripData" });
         }
         
+        // Log destination contact details
+        console.log('📍 Destination Contact Details in tripData:', {
+            OTDN: tripData.OTDN,
+            OTDO: tripData.OTDO
+        });
+        
         // Verify Razorpay Payment if paymentData is provided
         if (paymentData && paymentData.rzp_payment_id && paymentData.rzp_order_id && paymentData.rzp_signature) {
             const crypto = require("crypto");
@@ -245,7 +251,15 @@ exports.bookOrder = async (req, res) => {
         }
 
         // Set Customer ID from authenticated user
-        const customerId = req.customer.customerId;
+        const customerId = req.customer?.id || req.customer?.customerId;
+        
+        if (!customerId) {
+            return res.status(400).json({
+                success: false,
+                message: "Customer ID is missing from token"
+            });
+        }
+        
         orderData.CID = customerId;
         orderData.ORCD = customerId; // Also setting ORCD as it's used for fetching orders
 
@@ -270,9 +284,15 @@ exports.bookOrder = async (req, res) => {
         if (nearbyPartners.length > 0) {
             const partnerIds = nearbyPartners.map((p) => p.DPID);
 
+            // Fetch customer details to include in notification
+            const CustomerRepository = require("../../repositories/customer.repository");
+            const customerDetails = await CustomerRepository.findCustomerById(customerId);
+
             const eventData = {
                 orderId,
                 customerId,
+                customerName: customerDetails ? `${customerDetails.CFN || ''} ${customerDetails.CLN || ''}`.trim() : 'Customer',
+                customerPhone: customerDetails?.CDN || '',
                 pickupLocation: `${tripData.OTSA1}, ${tripData.OTSC}`,
                 dropLocation: `${tripData.OTDA1}, ${tripData.OTDCO}`,
                 orderValue: orderData.ORVL,

@@ -118,10 +118,20 @@ const createOrder = async (orderData, tripData) => {
                 OTID, ORID, OTSLL, OTDLL, 
                 OTSA1, OTSA2, OTSA3, OTSC, OTSZ, OTSS, OTSCO,
                 OTDA1, OTDA2, OTDA3, OTDC, OTDZ, OTDS, OTDCO,
-                OTSD, OTDD
+                OTSD, OTDD, OTDN, OTDO
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
+        
+        // Debug log
+        console.log('📝 Inserting OrderTrip with values:', {
+            tripId, orderId,
+            OTSLL: tripData.OTSLL,
+            OTDLL: tripData.OTDLL,
+            OTDN: tripData.OTDN,
+            OTDO: tripData.OTDO
+        });
+        
         await connection.execute(tripQuery, [
             tripId,
             orderId,
@@ -142,7 +152,9 @@ const createOrder = async (orderData, tripData) => {
             tripData.OTDS || "",
             tripData.OTDCO || "",
             tripData.OTSD,
-            tripData.OTDD
+            tripData.OTDD,
+            tripData.OTDN || "",
+            tripData.OTDO || ""
         ]);
 
         await connection.commit();

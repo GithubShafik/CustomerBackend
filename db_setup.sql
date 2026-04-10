@@ -18,6 +18,16 @@ CREATE TABLE IF NOT EXISTS OrderTrips (
     ORID VARCHAR(36),
     OTSLL VARCHAR(100), -- Pickup "lat,lng"
     OTDLL VARCHAR(100), -- Drop "lat,lng"
+    OTSA1 VARCHAR(50), -- Pickup address line 1
+    OTSC VARCHAR(50), -- Pickup city
+    OTSS VARCHAR(50), -- Pickup state
+    OTSCO VARCHAR(50), -- Pickup country
+    OTDA1 VARCHAR(50), -- Drop address line 1
+    OTDC VARCHAR(50), -- Drop city
+    OTDS VARCHAR(50), -- Drop state
+    OTDCO VARCHAR(50), -- Drop country
+    OTDN VARCHAR(100), -- Destination contact name
+    OTDO VARCHAR(20), -- Destination contact phone
     OTSD DATETIME,
     OTDD DATETIME,
     FOREIGN KEY (ORID) REFERENCES Orders(ORID)
