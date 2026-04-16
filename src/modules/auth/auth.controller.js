@@ -110,16 +110,17 @@ exports.registerAndSendOtp = async (req, res) => {
 
         console.log("SEND OTP:", normalizedPhone, otp); // debug
 
-        const response = await axios.get(
-            `https://2factor.in/API/V1/${process.env.TWO_FACTOR_API_KEY}/SMS/${normalizedPhone}/${otp}`
-        );
+        // const response = await axios.get(
+        //     `https://2factor.in/API/V1/${process.env.TWO_FACTOR_API_KEY}/SMS/${normalizedPhone}/${otp}`
+        // );
 
-        if (response.data.Status !== "Success") {
-            return res.status(500).json({
-                success: false,
-                error: "Failed to send OTP"
-            });
-        }
+        // if (response.data.Status !== "Success") {
+        // if (otp) {
+        //     return res.status(500).json({
+        //         success: false,
+        //         error: "Failed to send OTP"
+        //     });
+        // }
 
         otpStorage.set(normalizedPhone, {
             code: otp,

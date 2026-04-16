@@ -102,6 +102,43 @@ router.get("/types", orderController.getOrderTypes);
 router.post("/book", protect, orderController.bookOrder);
 
 /**
+ * @swagger
+ * /api/orders/book-multi:
+ *   post:
+ *     summary: Book a new multi-delivery order with multiple trips
+ *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - orderData
+ *               - tripData
+ *             properties:
+ *               orderData:
+ *                 type: object
+ *                 description: Order details
+ *               tripData:
+ *                 type: array
+ *                 description: Array of trip details for each delivery segment
+ *                 items:
+ *                   type: object
+ *               paymentData:
+ *                 type: object
+ *                 description: Payment verification data
+ *     responses:
+ *       201:
+ *         description: Multi-delivery order booked successfully
+ *       500:
+ *         description: Internal server error
+ */
+router.post("/book-multi", protect, orderController.bookMultiOrder);
+
+/**
  * GET /api/orders/:orderId/status — Poll order acceptance status
  */
 router.get("/:orderId/status", protect, orderController.getOrderStatus);

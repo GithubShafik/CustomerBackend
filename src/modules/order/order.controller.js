@@ -92,8 +92,8 @@ exports.getOrderStatus = async (req, res) => {
 
         const order = orders[0];
 
-        // ✅ 2. If rider accepted
-        if (order.DPID && order.ORST === 'Accepted') {
+        // ✅ 2. If rider accepted (check for DPID and accepted status)
+        if (order.DPID && (order.ORST === 'Accepted' || order.ORST === 'Pickup Confirmed')) {
 
             const [partnerRows] = await pool.execute(
                 `SELECT 
@@ -243,8 +243,8 @@ exports.bookOrder = async (req, res) => {
             orderData.RzpOrderID = paymentData.rzp_order_id;
             orderData.RzpPaymentID = paymentData.rzp_payment_id;
             orderData.RzpSignature = paymentData.rzp_signature;
-            // Also update main status to reflect payment success if needed
-            orderData.ORST = "Pending";
+            // Set initial status to "Order Placed" to match OrderStatus table
+            orderData.ORST = "Order Placed";
         } else {
             // Default to pending if no payment data (e.g. cash on delivery or pending payment)
             orderData.PayStatus = "PENDING";
@@ -267,15 +267,24 @@ exports.bookOrder = async (req, res) => {
           console.log("💾 Creating order in DB for customer:", customerId);
         const orderId = await OrderRepository.createOrder(orderData, tripData);
         console.log("✅ Order created in DB with ID:", orderId);
-        // Create entry in OrderPayments
-        // if (paymentData) {
-        //     await OrderRepository.createOrderPayment({
-        //         OID: orderId,
-        //         PID: paymentData.rzp_payment_id,
-        //         Amount: orderData.ORVL,
-        //         Status: "PAID"
-        //     });
-        // }
+        
+        // 2. Create entry in OrderPayments table
+        if (paymentData && paymentData.rzp_payment_id) {
+            console.log("💳 Creating OrderPayment entry...");
+            
+            await OrderRepository.createOrderPayment({
+                ORID: orderId,                              // Order ID (REQUIRED)
+                ORDS: tripData.ORDS || 0,                   // Order Distance (from frontend)
+                OTID: tripData.OTID || 0,                   // Order Time ID (rate master ID)
+                OTRR: tripData.OTRR || 0,                   // Order Time-based Rate
+                OTFA: orderData.ORVL || 0,                  // Order Final Amount (REQUIRED)
+                OTTI: paymentData.rzp_payment_id            // Transaction ID
+            });
+            
+            console.log("✅ OrderPayment created successfully");
+        } else {
+            console.log("⚠️ No payment data provided, skipping OrderPayment entry");
+        }
         // Get pickup coordinates for nearby riders
         const [lat, lng] = tripData.OTSLL.split(",").map(Number);
 
@@ -370,6 +379,157 @@ exports.getTermsAndConditionsController = async (req, res) => {
             success: false,
             message: "Server error",
             error: error.message
+        });
+    }
+};
+
+/**
+ * POST /api/orders/book-multi
+ * Book a new multi-delivery order with multiple trips
+ */
+exports.bookMultiOrder = async (req, res) => {
+    try {
+        console.log("📥 Received bookMultiOrder request:", JSON.stringify(req.body, null, 2));
+        const { orderData, tripData, paymentData } = req.body;
+
+        if (!orderData || !tripData || !Array.isArray(tripData)) {
+            console.error("❌ Missing orderData or tripData array in request");
+            return res.status(400).json({ 
+                success: false, 
+                message: "Missing orderData or tripData array" 
+            });
+        }
+
+        console.log(`📦 Creating multi-delivery order with ${tripData.length} trips`);
+
+        // Verify Razorpay Payment if paymentData is provided
+        if (paymentData && paymentData.rzp_payment_id && paymentData.rzp_order_id && paymentData.rzp_signature) {
+            const crypto = require("crypto");
+            const config = require("../../config/env");
+            
+            const text = paymentData.rzp_order_id + "|" + paymentData.rzp_payment_id;
+            const expectedSignature = crypto
+                .createHmac("sha256", config.razorpay.key_secret)
+                .update(text.toString())
+                .digest("hex");
+                
+            if (expectedSignature !== paymentData.rzp_signature) {
+                console.error("❌ Invalid Payment Signature");
+                return res.status(400).json({ success: false, message: "Invalid payment signature" });
+            }
+            
+            // Populate Razorpay columns in orderData
+            orderData.PayStatus = "PAID";
+            orderData.RzpOrderID = paymentData.rzp_order_id;
+            orderData.RzpPaymentID = paymentData.rzp_payment_id;
+            orderData.RzpSignature = paymentData.rzp_signature;
+            orderData.ORST = "Order Placed";
+        } else {
+            orderData.PayStatus = "PENDING";
+        }
+
+        // Set Customer ID from authenticated user
+        const customerId = req.customer?.id || req.customer?.customerId;
+        
+        if (!customerId) {
+            return res.status(400).json({
+                success: false,
+                message: "Customer ID is missing from token"
+            });
+        }
+        
+        orderData.CID = customerId;
+        orderData.ORCD = customerId;
+
+        // Create multi-delivery order in DB
+        console.log("💾 Creating multi-delivery order in DB for customer:", customerId);
+        const orderId = await OrderRepository.createMultiOrder(orderData, tripData);
+        console.log("✅ Multi-delivery order created in DB with ID:", orderId);
+        
+        // Create entry in OrderPayments table
+        if (paymentData && paymentData.rzp_payment_id) {
+            console.log("💳 Creating OrderPayment entry for multi-delivery...");
+            
+            // Calculate total distance from all trips
+           // Calculate total distance from all trips
+const totalDistance = tripData.reduce((sum, trip) => {
+    const distance = parseFloat(trip.ORDS) || 0;
+    console.log(`📍 [Multi-Order Payment] Trip distance:`, distance);
+    return sum + distance;
+}, 0);
+
+console.log(`💰 [Multi-Order Payment] Total distance calculated:`, totalDistance);
+console.log(`💰 [Multi-Order Payment] Trip count:`, tripData.length);
+
+await OrderRepository.createOrderPayment({
+    ORID: orderId,
+    ORDS: totalDistance,
+    OTID: tripData[0]?.OTID || 0,
+    OTRR: tripData[0]?.OTRR || 0,
+    OTFA: orderData.ORVL || 0,
+    OTTI: paymentData.rzp_payment_id
+});
+            
+            console.log("✅ OrderPayment created successfully for multi-delivery with total distance:", totalDistance);
+        }
+
+        // Get pickup coordinates from first trip for nearby riders
+        const [lat, lng] = tripData[0].OTSLL.split(",").map(Number);
+
+        const nearbyPartners = await OrderRepository.findNearbyPartners(lat, lng);
+
+        if (nearbyPartners.length > 0) {
+            const partnerIds = nearbyPartners.map((p) => p.DPID);
+
+            const CustomerRepository = require("../../repositories/customer.repository");
+            const customerDetails = await CustomerRepository.findCustomerById(customerId);
+
+            const eventData = {
+                orderId,
+                customerId,
+                customerName: customerDetails ? `${customerDetails.CFN || ''} ${customerDetails.CLN || ''}`.trim() : 'Customer',
+                customerPhone: customerDetails?.CDN || '',
+                pickupLocation: `${tripData[0].OTSA1}, ${tripData[0].OTSC}`,
+                dropLocation: `${tripData[tripData.length - 1].OTDA1}, ${tripData[tripData.length - 1].OTDC}`,
+                orderValue: orderData.ORVL,
+                numParcels: tripData.length,
+                isMultiDelivery: true
+            };
+
+            try {
+                const partnerBackendUrl = process.env.PARTNER_BACKEND_URL || 'http://localhost:8002';
+
+                console.log(`🌉 [Cross-Backend Bridge] Sending multi-delivery notification to ${partnerBackendUrl}...`);
+                
+                fetch(`${partnerBackendUrl}/api/internal/notify-partners`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ partnerIds, eventData })
+                })
+                    .then((res) => res.json())
+                    .then((data) =>
+                        console.log("✅ Multi-delivery rider notification success:", data)
+                    )
+                    .catch((err) =>
+                        console.error("❌ Multi-delivery notification failed:", err.message)
+                    );
+            } catch (error) {
+                console.error('❌ [Cross-Backend Bridge] Error:', error.message);
+            }
+        }
+
+        res.status(201).json({
+            success: true,
+            message: "Multi-delivery order booked successfully",
+            orderId,
+            numParcels: tripData.length
+        });
+    } catch (error) {
+        console.error("❌ bookMultiOrder error:", error);
+
+        res.status(500).json({
+            success: false,
+            message: error.message,
         });
     }
 };
