@@ -106,7 +106,9 @@ exports.registerAndSendOtp = async (req, res) => {
         const { phone } = req.body;
 
         const normalizedPhone = normalizePhone(phone);
-        const otp = Math.floor(1000 + Math.random() * 9000).toString();
+        // FIXED OTP FOR TESTING
+        // const otp = Math.floor(1000 + Math.random() * 9000).toString();
+        const otp = "1234";
 
         console.log("SEND OTP:", normalizedPhone, otp); // debug
 
