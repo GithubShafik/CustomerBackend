@@ -167,4 +167,29 @@ router.get("/order-rate", orderController.getOrderRateController);
  */
 router.get("/terms-and-conditions", orderController.getTermsAndConditionsController);
 
+/**
+ * @swagger
+ * /api/orders/{orderId}:
+ *   get:
+ *     summary: Get detailed information for a specific order
+ *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: orderId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the order to retrieve
+ *     responses:
+ *       200:
+ *         description: Order details retrieved successfully
+ *       404:
+ *         description: Order not found
+ *       401:
+ *         description: Unauthorized
+ */
+router.get("/:orderId", protect, orderController.getOrderDetails);
+
 module.exports = router;

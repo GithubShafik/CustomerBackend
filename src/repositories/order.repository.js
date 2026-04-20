@@ -394,6 +394,74 @@ const getTermsAndConditions = async () => {
         connection.release();
     }
 };
+
+const getOrderById = async (orderId) => {
+    const orderQuery = `
+        SELECT
+            o.ORID AS orderId,
+            o.ORDT AS orderDate,
+            o.ORVL AS orderValue,
+            o.ORST AS orderStatus,
+            o.ORDD AS deliveryDate,
+            o.ORCD AS orderCode,
+            o.OOID AS outletId,
+            o.DPID AS partnerId,
+            o.PayStatus AS paymentStatus,
+            o.RzpOrderID AS rzpOrderId,
+            dp.DPFN AS partnerFirstName,
+            dp.DPMN AS partnerPhone,
+            dp.DPSPIN AS partnerVehicleInfo
+        FROM Orders o
+        LEFT JOIN DeliveryPartner dp ON o.DPID = dp.DPID
+        WHERE o.ORID = ?
+    `;
+ 
+    const tripQuery = `
+        SELECT
+            OTID AS tripId,
+            OTSLL AS pickupLatLng,
+            OTDLL AS dropLatLng,
+            OTSA1 AS pickupAddress1,
+            OTSA2 AS pickupAddress2,
+            OTSA3 AS pickupAddress3,
+            OTSC AS pickupCity,
+            OTSZ AS pickupZip,
+            OTSS AS pickupState,
+            OTSCO AS pickupCountry,
+            OTDA1 AS dropAddress1,
+            OTDA2 AS dropAddress2,
+            OTDA3 AS dropAddress3,
+            OTDC AS dropCity,
+            OTDZ AS dropZip,
+            OTDS AS tripDistance,
+            OTDCO AS dropCountry,
+            OTDN AS recipientName,
+            OTDO AS recipientPhone
+        FROM OrderTrips
+        WHERE ORID = ?
+    `;
+ 
+    const [orderResults] = await pool.execute(orderQuery, [orderId]);
+    if (orderResults.length === 0) return null;
+ 
+    const [tripResults] = await pool.execute(tripQuery, [orderId]);
+   
+    // Parse vehicle info if available
+    const order = orderResults[0];
+    if (order.partnerVehicleInfo) {
+        try {
+            order.partnerVehicleInfo = JSON.parse(order.partnerVehicleInfo);
+        } catch (e) {
+            order.partnerVehicleInfo = null;
+        }
+    }
+   
+    return {
+        ...order,
+        trips: tripResults
+    };
+};
+ 
 module.exports = {
     getOrdersByCustomerId,
     getOrdersByStatus,
@@ -403,5 +471,6 @@ module.exports = {
     createOrderPayment,
     findNearbyPartners,
     getOrderRate,
-    getTermsAndConditions
+    getTermsAndConditions,
+    getOrderById
 };

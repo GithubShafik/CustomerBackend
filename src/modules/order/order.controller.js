@@ -533,3 +533,29 @@ await OrderRepository.createOrderPayment({
         });
     }
 };
+
+exports.getOrderDetails = async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        const order = await OrderRepository.getOrderById(orderId);
+
+        if (!order) {
+            return res.status(404).json({
+                success: false,
+                message: "Order not found"
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            order
+        });
+
+    } catch (error) {
+        console.error("❌ Get Order Details Error:", error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+};
