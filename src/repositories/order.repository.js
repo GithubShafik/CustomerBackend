@@ -409,6 +409,7 @@ const getOrderById = async (orderId) => {
             o.PayStatus AS paymentStatus,
             o.RzpOrderID AS rzpOrderId,
             dp.DPFN AS partnerFirstName,
+            dp.DPLN AS partnerLastName,
             dp.DPMN AS partnerPhone,
             dp.DPSPIN AS partnerVehicleInfo
         FROM Orders o
