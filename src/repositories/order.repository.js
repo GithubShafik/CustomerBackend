@@ -340,7 +340,7 @@ const findNearbyPartners = async (lat, lng) => {
                    * sin(radians(CAST(TRIM(SUBSTRING_INDEX(DPCLL, ',', 1)) AS DECIMAL(10,8))))
                )) AS distance
         FROM DPLocation
-        WHERE DPSTA = 1
+        WHERE DPSTA = 1 AND (DPOID IS NULL OR DPOID = '')
         HAVING distance <= 2
         ORDER BY distance;
     `;

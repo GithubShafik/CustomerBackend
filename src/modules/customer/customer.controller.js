@@ -136,3 +136,48 @@ exports.updateCustomerById = async (req, res) => {
         });
     }
 };
+
+/* Amol */
+exports.getCustomerHomeData = async (req, res) => {
+    try {
+        const customerId = req.customer?.id || req.customer?.customerId; // From JWT via protect middleware
+
+        if (!customerId) {
+            return res.status(400).json({
+                success: false,
+                error: "Customer ID is required"
+            });
+        }
+
+        const customerHome = await CustomerRepository.findCustomerHomeData(customerId);
+
+        if (!customerHome) {
+            return res.status(404).json({
+                success: false,
+                error: "Customer home data not found"
+            });
+        }
+
+        res.json({
+            success: true,
+            customer: {
+                id: customerHome.CID,
+                ordersCount: customerHome.CORD || "",
+                deliveryDistanceKM: customerHome.CDIST || "",
+                co2Saving: customerHome.CLN || "",
+                airPollutionSaving: customerHome.CDN || "",
+                noisePollutionSaving: customerHome.CANN || "",
+                treesSaved: customerHome.CSPIN || "",
+                greenCreditsEarned: customerHome.CDOB || "",
+                lastOrder: customerHome.CADL1 || ""
+            }
+        });
+
+    } catch (error) {
+        console.error("❌ Get CustomerHome Error:", error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+};

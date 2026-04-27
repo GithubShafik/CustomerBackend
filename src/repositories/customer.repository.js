@@ -181,11 +181,24 @@ const updateCustomerById = async (customerId, updateData) => {
     }
 };
 
+/* Amol */
+const findCustomerHomeData = async (customerId) => {
+    try {
+        const query = "SELECT * FROM CustHome WHERE CID = ?";
+        const [results] = await pool.execute(query, [customerId]);
+        return results[0] || null;
+    } catch (error) {
+        console.error("findCustomerHomeData error:", error);
+        return null;
+    }
+};
+
 module.exports = {
     findCustomerByPhone,
     findCustomerById,
     createCustomer,
     updateCustomerVerification,
     generateCustomerId,
-    updateCustomerById
+    updateCustomerById,
+    findCustomerHomeData
 };

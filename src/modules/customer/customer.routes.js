@@ -165,4 +165,62 @@ router.get("/profile", protect, customerController.getCustomerById);
  *         description: Internal server error
  */
 router.patch("/profile", protect, customerController.updateCustomerById);
+
+/**
+ * @swagger
+ * /api/customer/CustomerHome:
+ *   get:
+ *     summary: Get customer Home details by customer ID (from JWT token)
+ *     tags: [Customer]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Customer home details retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 customer:
+ *                   type: object
+ *                   properties:
+*                     id:
+ *                       type: string
+ *                     firstName:
+ *                       type: string
+ *                     middleName:
+ *                       type: string
+ *                     lastName:
+ *                       type: string
+ *                     phone:
+ *                       type: string
+ *                     alternatePhone:
+ *                       type: string
+ *                     email:
+ *                       type: string
+ *                     dob:
+ *                       type: string
+ *                     addressLine1:
+ *                       type: string
+ *                     addressLine2:
+ *                       type: string
+ *                     city:
+ *                       type: string
+ *                     state:
+ *                       type: string
+ *                     postalCode:
+ *                       type: string
+ *                     isVerified:
+ *                       type: boolean
+ *       401:
+ *         description: Unauthorized - Invalid or missing token
+ *       404:
+ *         description: Customer not found
+ */
+router.get("/CustomerHome", protect, customerController.getCustomerHomeData);
+
+
 module.exports = router;
