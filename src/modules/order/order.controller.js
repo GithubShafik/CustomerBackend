@@ -272,12 +272,20 @@ exports.bookOrder = async (req, res) => {
         if (paymentData && paymentData.rzp_payment_id) {
             console.log("💳 Creating OrderPayment entry...");
             
+            console.log("💳 Creating OrderPayment entry with:", {
+                OPPA: orderData.ORVL || 0,
+                OPTIP: orderData.tipAmount || 0,
+                OTFA: (parseFloat(orderData.ORVL) || 0) + (parseFloat(orderData.tipAmount) || 0)
+            });
+
             await OrderRepository.createOrderPayment({
                 ORID: orderId,                              // Order ID (REQUIRED)
                 ORDS: tripData.ORDS || 0,                   // Order Distance (from frontend)
                 OTID: tripData.OTID || 0,                   // Order Time ID (rate master ID)
                 OTRR: tripData.OTRR || 0,                   // Order Time-based Rate
-                OTFA: orderData.ORVL || 0,                  // Order Final Amount (REQUIRED)
+                OPPA: orderData.ORVL || 0,                  // Order Pay Amount (Base price)
+                OPTIP: orderData.tipAmount || 0,            // Order Tip Amount
+                OTFA: (parseFloat(orderData.ORVL) || 0) + (parseFloat(orderData.tipAmount) || 0), // Total Final Amount
                 OTTI: paymentData.rzp_payment_id            // Transaction ID
             });
             
@@ -461,12 +469,20 @@ const totalDistance = tripData.reduce((sum, trip) => {
 console.log(`💰 [Multi-Order Payment] Total distance calculated:`, totalDistance);
 console.log(`💰 [Multi-Order Payment] Trip count:`, tripData.length);
 
+console.log("💰 [Multi-Order] Creating OrderPayment with:", {
+    OPPA: orderData.ORVL || 0,
+    OPTIP: orderData.tipAmount || 0,
+    OTFA: (parseFloat(orderData.ORVL) || 0) + (parseFloat(orderData.tipAmount) || 0)
+});
+
 await OrderRepository.createOrderPayment({
     ORID: orderId,
     ORDS: totalDistance,
     OTID: tripData[0]?.OTID || 0,
     OTRR: tripData[0]?.OTRR || 0,
-    OTFA: orderData.ORVL || 0,
+    OPPA: orderData.ORVL || 0,
+    OPTIP: orderData.tipAmount || 0,
+    OTFA: (parseFloat(orderData.ORVL) || 0) + (parseFloat(orderData.tipAmount) || 0),
     OTTI: paymentData.rzp_payment_id
 });
             

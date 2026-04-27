@@ -286,6 +286,8 @@ const createOrderPayment = async (paymentData) => {
             ORDS: paymentData.ORDS,
             OTID: paymentData.OTID,
             OTRR: paymentData.OTRR,
+            OPPA: paymentData.OPPA,
+            OPTIP: paymentData.OPTIP,
             OTFA: paymentData.OTFA
         });
 
@@ -294,10 +296,14 @@ const createOrderPayment = async (paymentData) => {
         
         const paymentQuery = `
             INSERT INTO OrderPayments (
-                OPID, ORID, ORDS, OTID, OTRR, OTDS, OTFA, OTPM, OTTI, OPST, ODSID, OPDT, OPTIP
+                OPID, ORID, ORDS, OTID, OTRR, OTDS, OTFA, OTPM, OTTI, OPST, ODSID, OPDT, OPPA, OPTIP
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
+
+        const oppa = parseFloat(paymentData.OPPA) || 0;
+        const optip = parseFloat(paymentData.OPTIP) || 0;
+        const otfa = parseFloat(paymentData.OTFA) || (oppa + optip);
 
         await connection.execute(paymentQuery, [
             opId,                                    // OPID - Auto-generated
@@ -306,13 +312,14 @@ const createOrderPayment = async (paymentData) => {
             paymentData.OTID || 0,                   // OTID - Order Time ID (from rate master)
             paymentData.OTRR || 0,                   // OTRR - Order Time-based Rate
             0,                                       // OTDS - Order Trip Distance (not needed)
-            paymentData.OTFA || 0,                   // OTFA - Order Final Amount (REQUIRED)
+            otfa,                                    // OTFA - Order Final Amount
             1,                                       // OTPM - Payment Mode (1=Online)
             paymentData.OTTI || '',                  // OTTI - Transaction ID
             1,                                       // OPST - Payment Status (1=Success)
             '',                                      // ODSID - Delivery Status ID
             new Date(),                              // OPDT - Payment DateTime
-            0                                        // OPTIP - Tip Amount
+            oppa,                                    // OPPA - Pay Amount
+            optip                                    // OPTIP - Tip Amount
         ]);
 
         console.log('✅ OrderPayment created successfully:', opId);
