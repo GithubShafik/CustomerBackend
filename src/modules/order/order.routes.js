@@ -192,4 +192,28 @@ router.get("/terms-and-conditions", orderController.getTermsAndConditionsControl
  */
 router.get("/:orderId", protect, orderController.getOrderDetails);
 
+/**
+ * @swagger
+ * /api/orders/{orderId}/cancel:
+ *   post:
+ *     summary: Cancel an order by customer
+ *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: orderId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Order cancelled successfully
+ *       400:
+ *         description: Order cannot be cancelled
+ *       404:
+ *         description: Order not found
+ */
+router.post("/:orderId/cancel", protect, orderController.cancelOrder);
+
 module.exports = router;

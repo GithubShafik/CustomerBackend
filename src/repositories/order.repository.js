@@ -470,6 +470,12 @@ const getOrderById = async (orderId) => {
     };
 };
  
+const updateOrderStatus = async (orderId, status) => {
+    const query = `UPDATE Orders SET ORST = ? WHERE ORID = ?`;
+    const [result] = await pool.execute(query, [status, orderId]);
+    return result.affectedRows > 0;
+};
+
 module.exports = {
     getOrdersByCustomerId,
     getOrdersByStatus,
@@ -480,5 +486,6 @@ module.exports = {
     findNearbyPartners,
     getOrderRate,
     getTermsAndConditions,
-    getOrderById
+    getOrderById,
+    updateOrderStatus
 };

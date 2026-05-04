@@ -575,3 +575,84 @@ exports.getOrderDetails = async (req, res) => {
         });
     }
 };
+exports.cancelOrder = async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        const customerId = req.customer?.id || req.customer?.customerId;
+
+        if (!customerId) {
+            return res.status(401).json({ success: false, message: "Unauthorized" });
+        }
+
+        const order = await OrderRepository.getOrderById(orderId);
+
+        if (!order) {
+            return res.status(404).json({ success: false, message: "Order not found" });
+        }
+
+        // Only allow cancellation if order is not already picked up or delivered
+        const nonCancellableStatuses = [
+            "Order Picked",
+            "Trip Started",
+            "Order Delivered",
+            "Order Closed",
+            "Trip 2 Started",
+            "Trip 3 Started",
+            "Trip 4 Started",
+            "Trip 5 Started",
+            "Trip 6 Started",
+            "Order Delivered 1",
+            "Order Delivered 2",
+            "Order Delivered 3",
+            "Order Delivered 4",
+            "Order Delivered 5"
+        ];
+
+        if (nonCancellableStatuses.includes(order.orderStatus)) {
+            return res.status(400).json({
+                success: false,
+                message: `Order cannot be cancelled at this stage: ${order.orderStatus}`
+            });
+        }
+
+        const success = await OrderRepository.updateOrderStatus(orderId, "Order Cancelled");
+
+        if (success) {
+            // Notify partner backend if a rider was assigned
+            if (order.partnerId) {
+                try {
+                    const partnerBackendUrl = process.env.PARTNER_BACKEND_URL || 'http://localhost:8002';
+                    console.log(`🌉 [Cross-Backend Bridge] Notifying partner backend of cancellation for order ${orderId}...`);
+                    
+                    fetch(`${partnerBackendUrl}/api/internal/order-cancelled`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ orderId, partnerId: order.partnerId, reason: "Cancelled by Customer" })
+                    })
+                    .then(res => res.json())
+                    .then(data => console.log("✅ Partner cancellation notification success:", data))
+                    .catch(err => console.error("❌ Partner cancellation notification failed:", err.message));
+                } catch (error) {
+                    console.error('❌ [Cross-Backend Bridge] Notification error:', error.message);
+                }
+            }
+
+            return res.status(200).json({
+                success: true,
+                message: "Order cancelled successfully"
+            });
+        } else {
+            return res.status(500).json({
+                success: false,
+                message: "Failed to update order status"
+            });
+        }
+
+    } catch (error) {
+        console.error("❌ Cancel Order Error:", error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+};
