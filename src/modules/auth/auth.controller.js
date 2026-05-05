@@ -50,23 +50,14 @@ exports.registerCustomer = async (req, res) => {
         const existing =
             await CustomerRepository.findCustomerByPhone(normalizedPhone);
 
-        if (existing) {
-            return res.status(409).json({
-                success: false,
-                error: "Customer already exists"
-            });
-        }
-
-        const customerId = CustomerRepository.generateCustomerId();
+        let customerId;
 
         const customerData = {
-            CID: customerId,
             CFN: firstName || "",
             CMN: middleName || "",
             CLN: lastName || "",
             CDN: normalizedPhone,
             CANN: normalizedAlternatePhone,
-            CTL: 0,
             email: email || "",
             dob: dob || "",
             addressLine1: addressLine1 || "",
@@ -76,11 +67,21 @@ exports.registerCustomer = async (req, res) => {
             postalCode: postalCode || ""
         };
 
-        await CustomerRepository.createCustomer(customerData);
+        if (existing) {
+            customerId = existing.CID;
+            // Update existing customer profile
+            await CustomerRepository.updateCustomerById(customerId, customerData);
+        } else {
+            customerId = CustomerRepository.generateCustomerId();
+            customerData.CID = customerId;
+            customerData.CTL = 0;
+            // Create new customer
+            await CustomerRepository.createCustomer(customerData);
+        }
 
         res.status(201).json({
             success: true,
-            message: "Customer registered successfully",
+            message: existing ? "Customer profile updated successfully" : "Customer registered successfully",
             customer: {
                 id: customerId,
                 firstName,
@@ -106,23 +107,24 @@ exports.registerAndSendOtp = async (req, res) => {
         const { phone } = req.body;
 
         const normalizedPhone = normalizePhone(phone);
+
         // FIXED OTP FOR TESTING
         // const otp = Math.floor(1000 + Math.random() * 9000).toString();
-        const otp = "1234";
+        const otp = "1234"; // For testing, use a fixed OTP
 
         console.log("SEND OTP:", normalizedPhone, otp); // debug
 
-        // const response = await axios.get(
-        //     `https://2factor.in/API/V1/${process.env.TWO_FACTOR_API_KEY}/SMS/${normalizedPhone}/${otp}`
-        // );
+        const response = await axios.get(
+            `https://2factor.in/API/V1/${process.env.TWO_FACTOR_API_KEY}/SMS/${normalizedPhone}/${otp}`
+        );
 
-        // if (response.data.Status !== "Success") {
-        // if (otp) {
-        //     return res.status(500).json({
-        //         success: false,
-        //         error: "Failed to send OTP"
-        //     });
-        // }
+        if (response.data.Status !== "Success") {
+        if (otp) {
+            return res.status(500).json({
+                success: false,
+                error: "Failed to send OTP"
+            });
+        }
 
         otpStorage.set(normalizedPhone, {
             code: otp,
@@ -134,7 +136,8 @@ exports.registerAndSendOtp = async (req, res) => {
             message: "OTP sent successfully"
         });
 
-    } catch (error) {
+    }}
+    catch (error) {
         console.error(error);
         res.status(500).json({ success: false, error: error.message });
     }
