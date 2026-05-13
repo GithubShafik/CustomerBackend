@@ -27,15 +27,20 @@ exports.getCustomerById = async (req, res) => {
         res.json({
             success: true,
             customer: {
-                id: customerHome.CID,
-                ordersCount: customerHome.CORD || "",
-                deliveryDistanceKM: customerHome.CDIST || "",
-                co2Saving: customerHome.CCO2 || "",
-                airPollutionSaving: customerHome.CAIR || "",
-                noisePollutionSaving: customerHome.CNOI || "",
-                treesSaved: customerHome.CTRE || "",
-                greenCreditsEarned: customerHome.CCRE || "",
-                lastOrder: customerHome.CLOR || ""
+                id: customer.CID,
+                firstName: customer.CFN || "",
+                middleName: customer.CMN || "",
+                lastName: customer.CLN || "",
+                phone: customer.CDN || "",
+                alternatePhone: customer.CANN || "",
+                email: customer.CSPIN || "",
+                dob: customer.CDOB || "",
+                addressLine1: customer.CADL1 || "",
+                addressLine2: customer.CADL2 || "",
+                city: customer.CADCT || "",
+                state: customer.CADST || "",
+                postalCode: customer.CADZ || "",
+                isVerified: customer.CTL === 1
             }
         });
 
