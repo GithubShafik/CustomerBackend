@@ -164,12 +164,12 @@ exports.getCustomerHomeData = async (req, res) => {
                 id: customerHome.CID,
                 ordersCount: customerHome.CORD || "",
                 deliveryDistanceKM: customerHome.CDIST || "",
-                co2Saving: customerHome.CLN || "",
-                airPollutionSaving: customerHome.CDN || "",
-                noisePollutionSaving: customerHome.CANN || "",
-                treesSaved: customerHome.CSPIN || "",
-                greenCreditsEarned: customerHome.CDOB || "",
-                lastOrder: customerHome.CADL1 || ""
+                co2Saving: customerHome.CCO2 || "",
+                airPollutionSaving: customerHome.CAIR || "",
+                noisePollutionSaving: customerHome.CNOI || "",
+                treesSaved: customerHome.CTRE || "",
+                greenCreditsEarned: customerHome.CCRE || "",
+                lastOrder: customerHome.CLOR || ""
             }
         });
 
