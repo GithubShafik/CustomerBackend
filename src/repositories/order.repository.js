@@ -471,11 +471,31 @@ const getOrderById = async (orderId) => {
 };
  
 const updateOrderStatus = async (orderId, status) => {
-    const query = `UPDATE Orders SET ORST = ? WHERE ORID = ?`;
-    const [result] = await pool.execute(query, [status, orderId]);
-    return result.affectedRows > 0;
+    const connection = await pool.getConnection();
+    try {
+        await connection.beginTransaction();
+ 
+        const query = `UPDATE Orders SET ORST = ? WHERE ORID = ?`;
+        const [result] = await connection.execute(query, [status, orderId]);
+ 
+        // If order is cancelled or delivered, free up the partner in DPLocation
+        if (status === "Order Cancelled" || status === "Order Delivered") {
+            const clearDPQuery = `UPDATE DPLocation SET DPOID = NULL, DPTID = NULL WHERE DPOID = ?`;
+            await connection.execute(clearDPQuery, [orderId]);
+            console.log(`📍 DPLocation cleared (DPOID/DPTID) for order: ${orderId} (Status: ${status})`);
+        }
+ 
+        await connection.commit();
+        return result.affectedRows > 0;
+    } catch (error) {
+        if (connection) await connection.rollback();
+        console.error("❌ Error in updateOrderStatus:", error);
+        throw error;
+    } finally {
+        if (connection) connection.release();
+    }
 };
-
+ 
 module.exports = {
     getOrdersByCustomerId,
     getOrdersByStatus,
@@ -489,3 +509,4 @@ module.exports = {
     getOrderById,
     updateOrderStatus
 };
+ 
