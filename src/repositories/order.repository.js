@@ -1,7 +1,7 @@
 const mysql = require("mysql2/promise");
 const config = require("../config/env");
 const crypto = require("crypto");
-
+ 
 const pool = mysql.createPool({
     host: config.db.host,
     user: config.db.user,
@@ -13,13 +13,13 @@ const pool = mysql.createPool({
     queueLimit: 0,
     connectTimeout: 10000
 });
-
+ 
 /**
  * Get all orders for a specific customer
  */
 const getOrdersByCustomerId = async (customerId) => {
     const query = `
-        SELECT 
+        SELECT
             ORID AS orderId,
             ORDT AS orderDate,
             ORVL AS orderValue,
@@ -34,13 +34,13 @@ const getOrdersByCustomerId = async (customerId) => {
     const [results] = await pool.execute(query, [customerId]);
     return results;
 };
-
+ 
 /**
  * Get orders filtered by status
  */
 const getOrdersByStatus = async (customerId, status) => {
     const query = `
-        SELECT 
+        SELECT
             ORID AS orderId,
             ORDT AS orderDate,
             ORVL AS orderValue,
@@ -55,13 +55,13 @@ const getOrdersByStatus = async (customerId, status) => {
     const [results] = await pool.execute(query, [customerId, status]);
     return results;
 };
-
+ 
 /**
  * Get all available order types
  */
 const getAllOrderTypes = async () => {
     const query = `
-        SELECT 
+        SELECT
             OTYP AS typeId,
             OTDS AS typeDescription
         FROM OrderTypes
@@ -70,22 +70,22 @@ const getAllOrderTypes = async () => {
     const [results] = await pool.execute(query);
     return results;
 };
-
+ 
 /**
  * Create a new order and trip (GUID from MySQL)
  */
 const createOrder = async (orderData, tripData) => {
     const connection = await pool.getConnection();
-
+ 
     try {
         await connection.beginTransaction();
-
+ 
         // Use Node.js crypto for GUIDs (more reliable than extra DB calls)
         const orderId = crypto.randomUUID();
         const tripId = crypto.randomUUID();
-
+ 
         console.log(`📦 Generated GUIDs: Order=${orderId}, Trip=${tripId}`);
-
+ 
         // 1. Insert Order
         const orderQuery = `
     INSERT INTO Orders (
@@ -93,7 +93,7 @@ const createOrder = async (orderData, tripData) => {
     )
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `;
-
+ 
        await connection.execute(orderQuery, [
     orderId,
     orderData.ORDT || null,
@@ -111,18 +111,18 @@ const createOrder = async (orderData, tripData) => {
     orderData.RzpPaymentID || null,
     orderData.RzpSignature || null
 ]);
-
+ 
         // 2. Insert OrderTrip
         const tripQuery = `
             INSERT INTO OrderTrips (
-                OTID, ORID, OTSLL, OTDLL, 
+                OTID, ORID, OTSLL, OTDLL,
                 OTSA1, OTSA2, OTSA3, OTSC, OTSZ, OTSS, OTSCO,
                 OTDA1, OTDA2, OTDA3, OTDC, OTDZ, OTDS, OTDCO,
                 OTSD, OTDD, OTDN, OTDO
             )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
-        
+ 
         // Debug log
         console.log('📝 Inserting OrderTrip with values:', {
             tripId, orderId,
@@ -131,7 +131,7 @@ const createOrder = async (orderData, tripData) => {
             OTDN: tripData.OTDN,
             OTDO: tripData.OTDO
         });
-        
+ 
         await connection.execute(tripQuery, [
             tripId,
             orderId,
@@ -156,7 +156,7 @@ const createOrder = async (orderData, tripData) => {
             tripData.OTDN || "",
             tripData.OTDO || ""
         ]);
-
+ 
         await connection.commit();
         return orderId;
     } catch (error) {
@@ -167,22 +167,22 @@ const createOrder = async (orderData, tripData) => {
         if (connection) connection.release();
     }
 };
-
+ 
 /**
  * Create a new order with multiple trips (GUID from MySQL)
  */
 const createMultiOrder = async (orderData, tripsData) => {
     const connection = await pool.getConnection();
-
+ 
     try {
         await connection.beginTransaction();
-
+ 
         // Use Node.js crypto for GUIDs
         const orderId = crypto.randomUUID();
-
+ 
         console.log(`📦 Generated Order ID for multi-delivery: ${orderId}`);
         console.log(`📦 Creating ${tripsData.length} trips for this order`);
-
+ 
         // 1. Insert Order (single order for all trips)
         const orderQuery = `
             INSERT INTO Orders (
@@ -190,7 +190,7 @@ const createMultiOrder = async (orderData, tripsData) => {
             )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
-
+ 
         await connection.execute(orderQuery, [
             orderId,
             orderData.ORDT || null,
@@ -208,12 +208,12 @@ const createMultiOrder = async (orderData, tripsData) => {
             orderData.RzpPaymentID || null,
             orderData.RzpSignature || null
         ]);
-
+ 
         // 2. Insert multiple OrderTrips
         for (let i = 0; i < tripsData.length; i++) {
             const tripData = tripsData[i];
             const tripId = crypto.randomUUID();
-
+ 
             console.log(`📝 [Multi-Order] Creating trip ${i + 1}/${tripsData.length}: ${tripId}`);
             console.log(`📍 [Multi-Order] Trip ${i + 1} details:`, {
                 pickup: tripData.OTSA1,
@@ -223,17 +223,17 @@ const createMultiOrder = async (orderData, tripsData) => {
                 destinationName: tripData.OTDN,
                 destinationContact: tripData.OTDO
             });
-
+ 
             const tripQuery = `
                 INSERT INTO OrderTrips (
-                    OTID, ORID, OTSLL, OTDLL, 
+                    OTID, ORID, OTSLL, OTDLL,
                     OTSA1, OTSA2, OTSA3, OTSC, OTSZ, OTSS, OTSCO,
                     OTDA1, OTDA2, OTDA3, OTDC, OTDZ, OTDS, OTDCO,
                     OTSD, OTDD, OTDN, OTDO
                 )
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `;
-
+ 
             await connection.execute(tripQuery, [
                 tripId,
                 orderId,
@@ -258,10 +258,10 @@ const createMultiOrder = async (orderData, tripsData) => {
                 tripData.OTDN || "",
                 tripData.OTDO || ""
             ]);
-            
+ 
             console.log(`✅ [Multi-Order] Trip ${i + 1} inserted successfully`);
         }
-
+ 
         await connection.commit();
         console.log(`✅ Multi-delivery order created successfully with ${tripsData.length} trips`);
         return orderId;
@@ -273,13 +273,13 @@ const createMultiOrder = async (orderData, tripsData) => {
         if (connection) connection.release();
     }
 };
-
+ 
 /**
  * Create entry in OrderPayments table
  */
 const createOrderPayment = async (paymentData) => {
     const connection = await pool.getConnection();
-
+ 
     try {
         console.log('💳 Creating OrderPayment entry:', {
             ORID: paymentData.ORID,
@@ -290,21 +290,21 @@ const createOrderPayment = async (paymentData) => {
             OPTIP: paymentData.OPTIP,
             OTFA: paymentData.OTFA
         });
-
+ 
         // Generate unique OPID (15 chars)
         const opId = `OP${Date.now().toString().slice(-13)}`;
-        
+ 
         const paymentQuery = `
             INSERT INTO OrderPayments (
                 OPID, ORID, ORDS, OTID, OTRR, OTDS, OTFA, OTPM, OTTI, OPST, ODSID, OPDT, OPPA, OPTIP
             )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
-
+ 
         const oppa = parseFloat(paymentData.OPPA) || 0;
         const optip = parseFloat(paymentData.OPTIP) || 0;
         const otfa = parseFloat(paymentData.OTFA) || (oppa + optip);
-
+ 
         await connection.execute(paymentQuery, [
             opId,                                    // OPID - Auto-generated
             paymentData.ORID,                        // ORID - Order ID (REQUIRED)
@@ -321,10 +321,10 @@ const createOrderPayment = async (paymentData) => {
             oppa,                                    // OPPA - Pay Amount
             optip                                    // OPTIP - Tip Amount
         ]);
-
+ 
         console.log('✅ OrderPayment created successfully:', opId);
         return opId;
-
+ 
     } catch (error) {
         console.error('❌ Error creating OrderPayment:', error);
         throw error;
@@ -332,18 +332,18 @@ const createOrderPayment = async (paymentData) => {
         if (connection) connection.release();
     }
 };
-
+ 
 /**
  * Find nearby partners (within 2km)
  */
 const findNearbyPartners = async (lat, lng) => {
     const query = `
-        SELECT DPID, 
+        SELECT DPID,
                (6371 * acos(
-                   cos(radians(?)) 
+                   cos(radians(?))
                    * cos(radians(CAST(TRIM(SUBSTRING_INDEX(DPCLL, ',', 1)) AS DECIMAL(10,8))))
-                   * cos(radians(CAST(TRIM(SUBSTRING_INDEX(DPCLL, ',', -1)) AS DECIMAL(11,8))) - radians(?)) 
-                   + sin(radians(?)) 
+                   * cos(radians(CAST(TRIM(SUBSTRING_INDEX(DPCLL, ',', -1)) AS DECIMAL(11,8))) - radians(?))
+                   + sin(radians(?))
                    * sin(radians(CAST(TRIM(SUBSTRING_INDEX(DPCLL, ',', 1)) AS DECIMAL(10,8))))
                )) AS distance
         FROM DPLocation
@@ -351,16 +351,16 @@ const findNearbyPartners = async (lat, lng) => {
         HAVING distance <= 2
         ORDER BY distance;
     `;
-
+ 
     const [results] = await pool.execute(query, [lat, lng, lat]);
     return results;
 };
-
+ 
 const getOrderRate = async () => {
     const connection = await pool.getConnection();
     try {
         const query = `
-            SELECT 
+            SELECT
                 OTID  AS orderTimeId,
                 OTWS  AS startTime,
                 OTWE  AS endTime,
@@ -373,35 +373,35 @@ const getOrderRate = async () => {
             WHERE ORDU IS NOT NULL
             ORDER BY OTWS
         `;
-
+ 
         const [rows] = await connection.execute(query);
         return rows;
-
+ 
     } finally {
         connection.release();
     }
 };
-
+ 
 const getTermsAndConditions = async () => {
     const connection = await pool.getConnection();
     try {
         const query = `
-            SELECT 
+            SELECT
                 TCCU AS customerTnC,
                 TCDP AS deliveryPartnerTnC,
                 TCPG AS paymentGatewayTnC
             FROM PDTnC
             LIMIT 1
         `;
-
+ 
         const [rows] = await connection.execute(query);
         return rows[0];
-
+ 
     } finally {
         connection.release();
     }
 };
-
+ 
 const getOrderById = async (orderId) => {
     const orderQuery = `
         SELECT
@@ -480,9 +480,20 @@ const updateOrderStatus = async (orderId, status) => {
  
         // If order is cancelled or delivered, free up the partner in DPLocation
         if (status === "Order Cancelled" || status === "Order Delivered") {
-            const clearDPQuery = `UPDATE DPLocation SET DPOID = NULL, DPTID = NULL WHERE DPOID = ?`;
-            await connection.execute(clearDPQuery, [orderId]);
-            console.log(`📍 DPLocation cleared (DPOID/DPTID) for order: ${orderId} (Status: ${status})`);
+            try {
+                const clearDPQuery = `UPDATE DPLocation SET DPOID = NULL, DPTID = NULL WHERE DPOID = ? OR DPID = (SELECT DPID FROM Orders WHERE ORID = ?)`;
+                await connection.execute(clearDPQuery, [orderId, orderId]);
+                console.log(`📍 DPLocation cleared (DPOID/DPTID) for order: ${orderId} (Status: ${status})`);
+            } catch (clearError) {
+                console.warn(`⚠️ Could not clear DPLocation for order ${orderId}:`, clearError.message);
+                // Attempt clearing with only DPOID if first query failed (maybe DPTID is missing)
+                try {
+                    const fallbackQuery = `UPDATE DPLocation SET DPOID = NULL WHERE DPOID = ?`;
+                    await connection.execute(fallbackQuery, [orderId]);
+                } catch (e) {
+                    console.warn(`⚠️ Fallback DPLocation clear also failed:`, e.message);
+                }
+            }
         }
  
         await connection.commit();
