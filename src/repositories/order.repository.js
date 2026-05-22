@@ -469,7 +469,7 @@ const getOrderById = async (orderId) => {
         trips: tripResults
     };
 };
- 
+
 const updateOrderStatus = async (orderId, status) => {
     const connection = await pool.getConnection();
     try {
@@ -481,14 +481,20 @@ const updateOrderStatus = async (orderId, status) => {
         // If order is cancelled or delivered, free up the partner in DPLocation
         if (status === "Order Cancelled" || status === "Order Delivered") {
             try {
-                const clearDPQuery = `UPDATE DPLocation SET DPOID = NULL, DPTID = NULL WHERE DPOID = ? OR DPID = (SELECT DPID FROM Orders WHERE ORID = ?)`;
+                // Clear location for this order, or whichever partner has this order ID assigned
+                const clearDPQuery = `
+                    UPDATE DPLocation l
+                    LEFT JOIN Orders o ON o.ORID = ?
+                    SET l.DPOID = NULL, l.DPTID = NULL
+                    WHERE l.DPOID = ? OR (o.DPID IS NOT NULL AND l.DPID = o.DPID)
+                `;
                 await connection.execute(clearDPQuery, [orderId, orderId]);
                 console.log(`📍 DPLocation cleared (DPOID/DPTID) for order: ${orderId} (Status: ${status})`);
             } catch (clearError) {
                 console.warn(`⚠️ Could not clear DPLocation for order ${orderId}:`, clearError.message);
                 // Attempt clearing with only DPOID if first query failed (maybe DPTID is missing)
                 try {
-                    const fallbackQuery = `UPDATE DPLocation SET DPOID = NULL WHERE DPOID = ?`;
+                    const fallbackQuery = `UPDATE DPLocation SET DPOID = NULL, DPTID = NULL WHERE DPOID = ?`;
                     await connection.execute(fallbackQuery, [orderId]);
                 } catch (e) {
                     console.warn(`⚠️ Fallback DPLocation clear also failed:`, e.message);
@@ -506,6 +512,7 @@ const updateOrderStatus = async (orderId, status) => {
         if (connection) connection.release();
     }
 };
+ 
  
 module.exports = {
     getOrdersByCustomerId,

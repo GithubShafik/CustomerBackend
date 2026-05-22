@@ -617,24 +617,22 @@ exports.cancelOrder = async (req, res) => {
 
         const success = await OrderRepository.updateOrderStatus(orderId, "Order Cancelled");
 
-        if (success) {
-            // Notify partner backend if a rider was assigned
-            if (order.partnerId) {
-                try {
-                    const partnerBackendUrl = process.env.PARTNER_BACKEND_URL || 'http://localhost:8002';
-                    console.log(`🌉 [Cross-Backend Bridge] Notifying partner backend of cancellation for order ${orderId}...`);
-                    
-                    fetch(`${partnerBackendUrl}/api/internal/order-cancelled`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ orderId, partnerId: order.partnerId, reason: "Cancelled by Customer" })
-                    })
-                    .then(res => res.json())
-                    .then(data => console.log("✅ Partner cancellation notification success:", data))
-                    .catch(err => console.error("❌ Partner cancellation notification failed:", err.message));
-                } catch (error) {
-                    console.error('❌ [Cross-Backend Bridge] Notification error:', error.message);
-                }
+          if (success) {
+            // Notify partner backend (to clear DPLocation and stop notifications)
+            try {
+                const axios = require("axios");
+                const partnerBackendUrl = process.env.PARTNER_BACKEND_URL || 'http://localhost:8002';
+                console.log(`🌉 [Cross-Backend Bridge] Notifying partner backend of cancellation for order ${orderId}...`);
+ 
+                axios.post(`${partnerBackendUrl}/api/internal/order-cancelled`, {
+                    orderId,
+                    partnerId: order.partnerId || null,
+                    reason: "Cancelled by Customer"
+                })
+                    .then(response => console.log("✅ Partner cancellation notification success:", response.data))
+                    .catch(err => console.error("❌ Partner cancellation notification failed:", err.response?.data || err.message));
+            } catch (error) {
+                console.error('❌ [Cross-Backend Bridge] Notification error:', error.message);
             }
 
             return res.status(200).json({
