@@ -86,6 +86,44 @@ app.post('/api/internal/customer/notify-status-update', (req, res) => {
     }
 });
 
+
+// Internal Bridge for Real-Time Location Updates
+app.post('/api/internal/customer/notify-location', async (req, res) => {
+    const { orderId, latitude, longitude } = req.body;
+    console.log(`[Location Bridge] 📥 RECEIVED location update for order ${orderId}: lat=${latitude}, lng=${longitude}`);
+    
+    if (!orderId || !latitude || !longitude) {
+        return res.status(400).json({ success: false, error: "Missing required location data" });
+    }
+
+    try {
+        const io = getIO();
+        
+        // Find customerId for this order
+        const OrderRepository = require('./repositories/order.repository');
+        const order = await OrderRepository.getOrderById(orderId);
+        
+        if (order && order.CID) {
+            const customerId = order.CID;
+            const roomName = `customer_${customerId}`;
+            
+            io.to(roomName).emit("dp_location_update", {
+                orderId,
+                latitude,
+                longitude
+            });
+            console.log(`[Location Bridge] 🔔 Emitted 'dp_location_update' to room ${roomName}`);
+        } else {
+            console.warn(`[Location Bridge] ⚠️ No customer found for order ${orderId}`);
+        }
+
+        res.status(200).json({ success: true, message: "Location update processed" });
+    } catch (error) {
+        console.error("[Location Bridge] ❌ ERROR:", error.message);
+        res.status(500).json({ success: false, error: "Internal error" });
+    }
+});
+
 // Main Routes
 app.use('/api', router);
 
