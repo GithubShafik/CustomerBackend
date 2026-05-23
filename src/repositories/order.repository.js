@@ -418,9 +418,11 @@ const getOrderById = async (orderId) => {
             dp.DPFN AS partnerFirstName,
             dp.DPLN AS partnerLastName,
             dp.DPMN AS partnerPhone,
-            dp.DPSPIN AS partnerVehicleInfo
+            dp.DPSPIN AS partnerVehicleInfo,
+            loc.DPCLL AS riderLocation
         FROM Orders o
         LEFT JOIN DeliveryPartner dp ON o.DPID = dp.DPID
+        LEFT JOIN DPLocation loc ON o.DPID = loc.DPID
         WHERE o.ORID = ?
     `;
  
