@@ -617,13 +617,13 @@ exports.cancelOrder = async (req, res) => {
 
         const success = await OrderRepository.updateOrderStatus(orderId, "Order Cancelled");
 
-          if (success) {
+        if (success) {
             // Notify partner backend (to clear DPLocation and stop notifications)
             try {
                 const axios = require("axios");
                 const partnerBackendUrl = process.env.PARTNER_BACKEND_URL || 'http://localhost:8002';
                 console.log(`🌉 [Cross-Backend Bridge] Notifying partner backend of cancellation for order ${orderId}...`);
- 
+
                 axios.post(`${partnerBackendUrl}/api/internal/order-cancelled`, {
                     orderId,
                     partnerId: order.partnerId || null,

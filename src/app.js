@@ -86,7 +86,6 @@ app.post('/api/internal/customer/notify-status-update', (req, res) => {
     }
 });
 
-
 // Internal Bridge for Real-Time Location Updates
 app.post('/api/internal/customer/notify-location', async (req, res) => {
     const { orderId, latitude, longitude } = req.body;

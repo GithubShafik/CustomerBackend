@@ -47,8 +47,7 @@ exports.registerCustomer = async (req, res) => {
             });
         }
 
-        const existing =
-            await CustomerRepository.findCustomerByPhone(normalizedPhone);
+        const existing = await CustomerRepository.findCustomerByPhone(normalizedPhone);
 
         let customerId;
 
@@ -108,14 +107,15 @@ exports.registerAndSendOtp = async (req, res) => {
 
         const normalizedPhone = normalizePhone(phone);
 
-        // FIXED OTP FOR TESTING
+        // Fixed OTP for testing
+        // const otp = "1234";
         const otp = Math.floor(1000 + Math.random() * 9000).toString();
-        // const otp = "1234"; // For testing, use a fixed OTP
+
 
         console.log("SEND OTP:", normalizedPhone, otp);
 
         const response = await axios.get(
-            `https://2factor.in/API/V1/${process.env.TWO_FACTOR_API_KEY}/SMS/${normalizedPhone}/${otp}`
+            `https://2factor.in/API/V1/${process.env.TWO_FACTOR_API_KEY}/SMS/${normalizedPhone}/${otp}/OTP_Verification_Login`
         );
 
         // ❌ If API failed
