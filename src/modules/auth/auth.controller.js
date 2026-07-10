@@ -104,40 +104,43 @@ exports.registerCustomer = async (req, res) => {
 exports.registerAndSendOtp = async (req, res) => {
     try {
         const { phone } = req.body;
-
+ 
         const normalizedPhone = normalizePhone(phone);
-
+ 
         // Fixed OTP for testing
-        // const otp = "1234";
-        const otp = Math.floor(1000 + Math.random() * 9000).toString();
-
-
+        const otp = normalizedPhone === "+919999999999"
+            ? "1234"
+            : Math.floor(1000 + Math.random() * 9000).toString(); // const otp = Math.floor(1000 + Math.random() * 9000).toString();
+ 
         console.log("SEND OTP:", normalizedPhone, otp);
-
-        const response = await axios.get(
-            `https://2factor.in/API/V1/${process.env.TWO_FACTOR_API_KEY}/SMS/${normalizedPhone}/${otp}/OTP_Verification_Login`
-        );
-
-        // ❌ If API failed
-        if (response.data.Status !== "Success") {
-            return res.status(500).json({
-                success: false,
-                error: "Failed to send OTP"
-            });
+ 
+        if (normalizedPhone !== "+919999999999") {
+            const response = await axios.get(
+                `https://2factor.in/API/V1/${process.env.TWO_FACTOR_API_KEY}/SMS/${normalizedPhone}/${otp}/OTP_Verification_Login`
+            );
+ 
+ 
+            // ❌ If API failed
+            if (response.data.Status !== "Success") {
+                return res.status(500).json({
+                    success: false,
+                    error: "Failed to send OTP"
+                });
+            }
         }
-
+ 
         // ✅ Store OTP only if API success
         otpStorage.set(normalizedPhone, {
             code: otp,
             createdAt: new Date()
         });
-
+ 
         // ✅ Success response
         return res.json({
             success: true,
             message: "OTP sent successfully"
         });
-
+ 
     } catch (error) {
         console.error("OTP ERROR:", error.response?.data || error.message);
         return res.status(500).json({
@@ -146,6 +149,7 @@ exports.registerAndSendOtp = async (req, res) => {
         });
     }
 };
+ 
 /* ---------------- VERIFY OTP ---------------- */
 
 exports.verifyOtpAndLogin = async (req, res) => {
